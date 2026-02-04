@@ -218,6 +218,155 @@ def print_summary(results: dict):
     print("\n" + "="*60 + "\n")
 
 
+def get_user_input(feature_names: list, scaler: StandardScaler, encoding_map: dict = None) -> np.ndarray:
+    """
+    Get user input for prediction.
+    
+    Parameters:
+    -----------
+    feature_names : list
+        Names of features to input
+    scaler : StandardScaler
+        Scaler fitted on training data
+    encoding_map : dict
+        Mapping of categorical features to their encodings
+    
+    Returns:
+    --------
+    np.ndarray
+        Scaled input features
+    """
+    print("\n" + "="*60)
+    print("EXAM SCORE PREDICTION")
+    print("="*60)
+    
+    # Feature details for user guidance
+    feature_guidance = {
+        'age': 'Age of student (e.g., 18-25)',
+        'study_hours': 'Daily study hours (e.g., 2-8)',
+        'class_attendance': 'Class attendance percentage (0-100)',
+        'sleep_hours': 'Average sleep hours (4-10)',
+        'facility_rating': 'Facility rating (low/medium/high)',
+        'exam_difficulty': 'Exam difficulty (easy/moderate/hard)',
+    }
+    
+    user_input = []
+    
+    for feature in feature_names:
+        while True:
+            try:
+                if feature == 'gender':
+                    print(f"\n{feature.upper()}:")
+                    print("  Options: male, female, other")
+                    value = input(f"Enter {feature}: ").strip().lower()
+                    if value not in ['male', 'female', 'other']:
+                        print("  ❌ Invalid input. Please enter: male, female, or other")
+                        continue
+                    # Encode gender
+                    gender_map = {'female': 0, 'male': 1, 'other': 2}
+                    user_input.append(float(gender_map[value]))
+                
+                elif feature == 'course':
+                    print(f"\n{feature.upper()}:")
+                    print("  Options: bca, diploma, b.sc, b.tech, b.com, b.a")
+                    value = input(f"Enter {feature}: ").strip().lower()
+                    if value not in ['bca', 'diploma', 'b.sc', 'b.tech', 'b.com', 'b.a']:
+                        print("  ❌ Invalid input. Please enter a valid course")
+                        continue
+                    # Encode course
+                    course_map = {'b.a': 0, 'b.com': 1, 'b.sc': 2, 'b.tech': 3, 'bca': 4, 'diploma': 5}
+                    user_input.append(float(course_map[value]))
+                
+                elif feature == 'internet_access':
+                    print(f"\n{feature.upper()}:")
+                    print("  Options: yes, no")
+                    value = input(f"Enter {feature}: ").strip().lower()
+                    if value not in ['yes', 'no']:
+                        print("  ❌ Invalid input. Please enter: yes or no")
+                        continue
+                    user_input.append(float(1 if value == 'yes' else 0))
+                
+                elif feature == 'sleep_quality':
+                    print(f"\n{feature.upper()}:")
+                    print("  Options: poor, average, good")
+                    value = input(f"Enter {feature}: ").strip().lower()
+                    if value not in ['poor', 'average', 'good']:
+                        print("  ❌ Invalid input. Please enter: poor, average, or good")
+                        continue
+                    quality_map = {'average': 0, 'good': 1, 'poor': 2}
+                    user_input.append(float(quality_map[value]))
+                
+                elif feature == 'study_method':
+                    print(f"\n{feature.upper()}:")
+                    print("  Options: coaching, online videos, self-study")
+                    value = input(f"Enter {feature}: ").strip().lower()
+                    if value not in ['coaching', 'online videos', 'self-study']:
+                        print("  ❌ Invalid input. Please enter a valid study method")
+                        continue
+                    study_map = {'coaching': 0, 'online videos': 1, 'self-study': 2}
+                    user_input.append(float(study_map[value]))
+                
+                elif feature == 'facility_rating':
+                    print(f"\n{feature.upper()}:")
+                    print("  Options: low, medium, high")
+                    value = input(f"Enter {feature}: ").strip().lower()
+                    if value not in ['low', 'medium', 'high']:
+                        print("  ❌ Invalid input. Please enter: low, medium, or high")
+                        continue
+                    rating_map = {'high': 0, 'low': 1, 'medium': 2}
+                    user_input.append(float(rating_map[value]))
+                
+                elif feature == 'exam_difficulty':
+                    print(f"\n{feature.upper()}:")
+                    print("  Options: easy, moderate, hard")
+                    value = input(f"Enter {feature}: ").strip().lower()
+                    if value not in ['easy', 'moderate', 'hard']:
+                        print("  ❌ Invalid input. Please enter: easy, moderate, or hard")
+                        continue
+                    difficulty_map = {'easy': 0, 'hard': 1, 'moderate': 2}
+                    user_input.append(float(difficulty_map[value]))
+                
+                else:
+                    # Numeric features
+                    guidance = feature_guidance.get(feature, '')
+                    prompt = f"Enter {feature}" + (f" ({guidance})" if guidance else "") + ": "
+                    value = float(input(prompt))
+                    user_input.append(value)
+                
+                break
+                
+            except ValueError:
+                print(f"  ❌ Invalid input. Please enter a valid value for {feature}")
+            except Exception as e:
+                print(f"  ❌ Error: {str(e)}")
+    
+    # Convert to numpy array and scale
+    user_array = np.array(user_input).reshape(1, -1).astype(np.float32)
+    user_scaled = scaler.transform(user_array)
+    
+    return user_scaled
+
+
+def predict_score(model: LinearRegressionNumPy, user_input: np.ndarray) -> float:
+    """
+    Predict exam score for user input.
+    
+    Parameters:
+    -----------
+    model : LinearRegressionNumPy
+        Trained model
+    user_input : np.ndarray
+        Scaled user input features
+    
+    Returns:
+    --------
+    float
+        Predicted exam score
+    """
+    prediction = model.predict(user_input)[0]
+    return max(0, min(100, prediction))  # Clip to valid score range
+
+
 def main():
     """Main execution function."""
     print("\n" + "="*60)
@@ -242,6 +391,42 @@ def main():
     
     # Print summary
     print_summary(results)
+    
+    # Interactive prediction loop
+    while True:
+        try:
+            user_choice = input("\n🎯 Would you like to predict an exam score? (yes/no): ").strip().lower()
+            
+            if user_choice == 'yes':
+                user_input = get_user_input(feature_names, scaler)
+                predicted_score = predict_score(model, user_input)
+                
+                print("\n" + "="*60)
+                print("PREDICTION RESULT")
+                print("="*60)
+                print(f"\n📈 Predicted Exam Score: {predicted_score:.2f}/100")
+                
+                if predicted_score >= 80:
+                    print("   Status: 🌟 Excellent")
+                elif predicted_score >= 60:
+                    print("   Status: ✅ Good")
+                elif predicted_score >= 40:
+                    print("   Status: ⚠️  Average")
+                else:
+                    print("   Status: ❌ Poor")
+                print("\n" + "="*60)
+                
+            elif user_choice == 'no':
+                print("\n✓ Thank you for using the prediction system!")
+                break
+            else:
+                print("❌ Please enter 'yes' or 'no'")
+                
+        except KeyboardInterrupt:
+            print("\n\n✓ Program interrupted by user. Exiting...")
+            break
+        except Exception as e:
+            print(f"❌ Error during prediction: {str(e)}")
     
     print("✓ Project execution completed successfully!")
     
